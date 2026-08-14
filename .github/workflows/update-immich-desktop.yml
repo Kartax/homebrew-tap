@@ -1,0 +1,69 @@
+name: Update Immich Desktop cask
+run-name: Update Immich Desktop ${{ inputs.tag || 'latest stable' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Stable Immich Desktop release tag
+        required: true
+        type: string
+  schedule:
+    - cron: "17 */6 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-immich-desktop-cask
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve and verify release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_TAG: ${{ inputs.tag }}
+        run: ./scripts/update-immich-desktop.sh "$REQUESTED_TAG"
+
+      - name: Detect cask change
+        id: change
+        run: |
+          if [[ -z "$(git status --porcelain -- Casks/immich-desktop.rb)" ]]; then
+            echo "changed=false" >>"$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >>"$GITHUB_OUTPUT"
+          fi
+
+      - name: Register and audit cask
+        if: steps.change.outputs.changed == 'true'
+        run: |
+          tap_dir="$(brew --repository)/Library/Taps/kartax/homebrew-tap"
+          mkdir -p "$(dirname "$tap_dir")"
+          ln -s "$GITHUB_WORKSPACE" "$tap_dir"
+          brew style --cask kartax/tap/immich-desktop
+          brew audit --cask --strict kartax/tap/immich-desktop
+
+      - name: Smoke-test cask installation
+        if: steps.change.outputs.changed == 'true'
+        run: |
+          brew trust --cask kartax/tap/immich-desktop
+          brew install --cask kartax/tap/immich-desktop
+          test -d /Applications/ImmichDesktop.app
+          brew uninstall --cask kartax/tap/immich-desktop
+          brew untrust --cask kartax/tap/immich-desktop
+
+      - name: Publish cask
+        if: steps.change.outputs.changed == 'true'
+        run: |
+          version="$(awk -F'\"' '/^  version \"/ { print $2; exit }' Casks/immich-desktop.rb)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/immich-desktop.rb
+          git commit -m "immich-desktop ${version}"
+          git push
