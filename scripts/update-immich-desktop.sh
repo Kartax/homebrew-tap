@@ -109,8 +109,7 @@ cask "immich-desktop" do
   version "$VERSION"
   sha256 "$SHA256"
 
-  url "https://github.com/Kartax/immich-desktop-app/releases/download/v#{version}/ImmichDesktop.dmg",
-      verified: "github.com/Kartax/immich-desktop-app/"
+  url "https://github.com/Kartax/immich-desktop-app/releases/download/v#{version}/ImmichDesktop.dmg"
   name "Immich Desktop"
   desc "Browse a self-hosted Immich photo library in Finder"
   homepage "https://kartax.github.io/immich-desktop-app/"
