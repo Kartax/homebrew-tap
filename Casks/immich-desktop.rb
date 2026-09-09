@@ -1,6 +1,6 @@
 cask "immich-desktop" do
-  version "1.5.1"
-  sha256 "28f549780f6ab1b7dc5bd770d2dad96a19fb23cd41f318f934691968d6dc95a3"
+  version "1.6.0"
+  sha256 "5e0765cc74eeb30e779ec4e137de20efe6adac6d31f5f09397e4e8e8f3789810"
 
   url "https://github.com/Kartax/immich-desktop-app/releases/download/v#{version}/ImmichDesktop.dmg"
   name "Immich Desktop"
