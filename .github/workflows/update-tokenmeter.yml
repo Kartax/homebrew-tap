@@ -1,0 +1,69 @@
+name: Update TokenMeter cask
+run-name: Update TokenMeter ${{ inputs.tag || 'latest stable' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Stable TokenMeter release tag
+        required: true
+        type: string
+  schedule:
+    - cron: "17 */6 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-tokenmeter-cask
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Resolve and verify release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_TAG: ${{ inputs.tag }}
+        run: ./scripts/update-tokenmeter.sh "$REQUESTED_TAG"
+
+      - name: Detect cask change
+        id: change
+        run: |
+          if [[ -z "$(git status --porcelain -- Casks/tokenmeter.rb)" ]]; then
+            echo "changed=false" >>"$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >>"$GITHUB_OUTPUT"
+          fi
+
+      - name: Register and audit cask
+        if: steps.change.outputs.changed == 'true'
+        run: |
+          tap_dir="$(brew --repository)/Library/Taps/kartax/homebrew-tap"
+          mkdir -p "$(dirname "$tap_dir")"
+          ln -s "$GITHUB_WORKSPACE" "$tap_dir"
+          brew style --cask kartax/tap/tokenmeter
+          brew audit --cask --strict kartax/tap/tokenmeter
+
+      - name: Smoke-test cask installation
+        if: steps.change.outputs.changed == 'true'
+        run: |
+          brew trust --cask kartax/tap/tokenmeter
+          brew install --cask kartax/tap/tokenmeter
+          test -d /Applications/TokenMeter.app
+          brew uninstall --cask kartax/tap/tokenmeter
+          brew untrust --cask kartax/tap/tokenmeter
+
+      - name: Publish cask
+        if: steps.change.outputs.changed == 'true'
+        run: |
+          version="$(awk -F'\"' '/^  version \"/ { print $2; exit }' Casks/tokenmeter.rb)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/tokenmeter.rb
+          git commit -m "tokenmeter ${version}"
+          git push
