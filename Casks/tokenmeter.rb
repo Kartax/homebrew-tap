@@ -1,6 +1,6 @@
 cask "tokenmeter" do
-  version "0.1.2"
-  sha256 "5b71d29c9e80244ec1eb279f176348df44e010dbdc9ad09d5f8d3ec37454a193"
+  version "0.1.3"
+  sha256 "897420636291f662be5fa77a9c8c6c58b287664368a4a8caf01a7a02776dcebd"
 
   url "https://github.com/Kartax/tokenmeter/releases/download/v#{version}/TokenMeter.dmg"
   name "TokenMeter"
